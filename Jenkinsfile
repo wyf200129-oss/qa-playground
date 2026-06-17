@@ -2,22 +2,24 @@ pipeline {
     agent any
 
     environment {
-        // Chrome 无头模式（CI 环境必须）
-        CI                     = 'true'
-        // Allure 报告输出目录
-        ALLURE_RESULTS_DIR     = 'allure-results'
-        ALLURE_REPORT_DIR      = 'allure-report'
+        CI                 = 'true'
+        ALLURE_RESULTS_DIR = 'allure-results'
+        ALLURE_REPORT_DIR  = 'allure-report'
     }
 
     stages {
 
-        // ── 1. 拉取代码 ──────────────────────────────
+        // ── 1. 拉取代码 + 环境检查 ──────────────────
         stage('Checkout') {
             steps {
                 echo '📥 拉取 qa-playground 仓库代码...'
                 checkout scm
-                sh 'python --version && pip --version'
-                sh 'google-chrome --version'
+
+                echo '🔍 检查 Python 环境...'
+                bat 'python --version'
+
+                echo '🔍 检查 Chrome...'
+                bat 'reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version 2>nul || echo Chrome not found in registry'
             }
         }
 
@@ -26,9 +28,9 @@ pipeline {
             steps {
                 echo '📦 安装 POM 框架依赖...'
                 dir('automation-demos/ui-pom') {
-                    sh '''#!/bin/bash
+                    bat '''
                         python -m venv .venv
-                        source .venv/bin/activate
+                        call .venv\\Scripts\\activate.bat
                         pip install -r requirements.txt
                         pip install allure-pytest
                     '''
@@ -36,24 +38,20 @@ pipeline {
             }
         }
 
-        // ── 3. 运行自动化测试 ──────────────────────
+        // ── 3. 运行测试 ──────────────────────────────
         stage('Run POM Tests') {
             steps {
                 echo '🧪 执行 ERP 供应商模块 UI 测试...'
                 dir('automation-demos/ui-pom') {
-                    sh '''#!/bin/bash
-                        source .venv/bin/activate
-                        python -m pytest test_cases/ \
-                            -v \
-                            --tb=short \
-                            --alluredir=$WORKSPACE/$ALLURE_RESULTS_DIR \
-                            -p no:warnings
+                    bat '''
+                        call .venv\\Scripts\\activate.bat
+                        python -m pytest test_cases/ -v --tb=short --alluredir=%ALLURE_RESULTS_DIR% -p no:warnings
                     '''
                 }
             }
             post {
                 always {
-                    echo '📊 测试执行完毕，收集结果...'
+                    echo '📊 测试执行完毕'
                 }
             }
         }
@@ -62,11 +60,7 @@ pipeline {
         stage('Allure Report') {
             steps {
                 echo '📈 生成 Allure 测试报告...'
-                sh '''
-                    allure generate $ALLURE_RESULTS_DIR \
-                        --clean \
-                        -o $ALLURE_REPORT_DIR
-                '''
+                bat 'allure generate %ALLURE_RESULTS_DIR% --clean -o %ALLURE_REPORT_DIR%'
                 allure includeProperties: false,
                        jdk: '',
                        report: 'allure-report',
