@@ -1,115 +1,89 @@
-# POM + YAML UI 自动化框架 Demo
+# POM + YAML 数据驱动 UI 自动化框架 — ERP 供应商管理实战 Demo
 
-> 基于 Page Object Model 设计模式 + YAML 数据驱动的 Web UI 自动化框架
-> 实际应用于 ERP 进销存系统，提升回归测试效率
+> 基于 Page Object Model + pytest + YAML 数据驱动的 Web UI 自动化框架
+> 实际应用于 ERP 系统供应商管理模块，演示从登录到业务操作的完整自动化链路
 
 ---
 
-## 🏗️ 架构设计
+## 🏗️ 目录结构
 
 ```
-project/
-├── base/
-│   └── base_page.py          # 封装 Selenium 基础操作
-├── pages/
-│   ├── login_page.py          # 登录页对象
-│   ├── purchase_page.py       # 采购单页对象
-│   └── sales_page.py          # 销售单页对象
-├── data/
-│   └── test_data.yaml         # YAML 数据驱动
-├── tests/
-│   ├── test_purchase.py       # 采购模块用例
-│   └── test_sales.py          # 销售模块用例
-├── conftest.py                # pytest 公共 fixture
-└── pytest.ini                 # pytest 配置
+ui-pom/
+├── conftest.py                    # pytest fixtures（driver + test_data + logged_in）
+├── requirements.txt               # Python 依赖
+├── base_page/
+│   └── basepage.py               # Selenium 操作封装 + 显式等待 + ddddocr 验证码识别
+├── page_object/
+│   ├── erp_login_page.py         # ERP 登录页（验证码自动识别）
+│   └── erp_vendor_page.py        # ERP 供应商管理页（新增 + 查询）
+├── test_cases/
+│   └── test_erp_vendor.py        # 测试用例（pytest）
+├── test_data/
+│   └── erp_vendor.yaml           # 测试数据（敏感信息已脱敏）
+└── utils/
+    └── browser_options.py        # Chrome 启动配置
 ```
 
-## 🎯 设计思路
+---
 
-### 1. POM 分层 —— 页面对象与用例分离
+## 🎯 框架亮点
 
-每个页面封装为一个类，页面元素定位与操作方法集中管理。页面变化时只需改一处。
+### 1. POM 三层分离
+
+| 层 | 职责 | 示例 |
+|----|------|------|
+| `base_page/` | Selenium 原子操作封装 | 定位、输入、点击、断言、显式等待 |
+| `page_object/` | 页面业务流程 | 登录流程、新增供应商、查询 |
+| `test_cases/` | 用例编排与断言 | 正向登录、新增供应商验证 |
+
+### 2. 显式等待替代 sleep
 
 ```python
-# pages/purchase_page.py
-class PurchasePage(BasePage):
-    """采购单页面对象"""
+# ❌ 之前：硬编码 sleep(15)，慢且不稳定
+self.wait(15)
 
-    # 元素定位（集中管理）
-    BTN_CREATE = (By.XPATH, "//button[contains(text(), '新建采购单')]")
-    INPUT_SKU = (By.ID, "sku-search")
-    BTN_ADD_TO_CART = (By.CSS_SELECTOR, ".add-to-cart")
-
-    def create_purchase_order(self, sku, quantity):
-        """创建采购单 —— 业务方法"""
-        self.click(self.BTN_CREATE)
-        self.input(self.INPUT_SKU, sku)
-        self.input(self.INPUT_QTY, quantity)
-        self.click(self.BTN_SUBMIT)
-        return self.get_order_id()
+# ✅ 现在：WebDriverWait 条件触发，又快又稳
+self.wait_for_url_change(self.url, timeout=20)       # 登录后 URL 跳转
+self.wait_for_invisible(*self.vendor_modal, timeout=10)  # 弹窗关闭
 ```
 
-### 2. BasePage 封装 —— 统一异常处理与等待
+### 3. 验证码自动识别（ddddocr）
 
 ```python
-# base/base_page.py
-class BasePage:
-    def __init__(self, driver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 10)
-
-    def find(self, locator):
-        """带显式等待的元素查找"""
-        return self.wait.until(EC.presence_of_element_located(locator))
-
-    def click(self, locator):
-        self.find(locator).click()
-
-    def input(self, locator, text):
-        el = self.find(locator)
-        el.clear()
-        el.send_keys(text)
+def get_code(self, by, value):
+    img_bytes = self.locator(by, value).screenshot_as_png
+    return ddddocr.DdddOcr().classification(img_bytes)
 ```
 
-### 3. YAML 数据驱动 —— 测试数据与代码分离
+### 4. YAML 数据驱动 + pytest
 
 ```yaml
-# data/test_data.yaml
-purchase_order:
-  normal:
-    sku: "SKU-001"
-    quantity: 100
-    supplier: "供应商A"
-  multi_sku:
-    items:
-      - { sku: "SKU-001", quantity: 50 }
-      - { sku: "SKU-002", quantity: 30 }
-  boundary:
-    min_qty: 1
-    max_qty: 99999
+# test_data/erp_vendor.yaml
+login:
+  user: "[ERP测试账号]"
+  pwd:  "[ERP测试密码]"
+vendor:
+  name: "[供应商测试名称]"
+  tele: "[供应商测试电话]"
 ```
 
-用例通过 `@pytest.mark.parametrize` 读取 YAML 数据，一份代码跑多组数据。
+Python 侧通过 `conftest.py` 统一加载，测试只关心业务逻辑：
 
-### 4. pytest + Jenkins CI —— 接入流水线
-
-```ini
-# pytest.ini
-[pytest]
-testpaths = tests
-python_files = test_*.py
-addopts = -v -s --html=report.html --self-contained-html
+```python
+def test_login_success(self, login_page, test_data):
+    url = login_page.login(test_data['login']['user'], test_data['login']['pwd'])
+    assert '/user/login' not in url
+    assert login_page.verify_logged_in()
 ```
 
-配置 Jenkins 定时任务，每日/每次发布前自动执行回归用例，生成 HTML 报告。
+### 5. webdriver-manager 自动管理驱动
 
----
+无需手动下载 chromedriver，`webdriver-manager` 自动匹配 Chrome 版本下载：
 
-## 📊 实际效果
-
-- 采购/销售模块高频流程全部实现自动化
-- 与接口自动化联动形成「接口冒烟 → UI 核心链路」回归策略
-- 纳入 Jenkins 定时执行，减少人工回归时间
+```python
+from webdriver_manager.chrome import ChromeDriverManager
+service = Service(ChromeDriverManager().install())
+```
 
 ---
 
@@ -117,25 +91,29 @@ addopts = -v -s --html=report.html --self-contained-html
 
 ```bash
 # 1. 安装依赖
-pip install selenium pytest pyyaml pytest-html
+pip install -r requirements.txt
 
-# 2. 下载对应版本的 ChromeDriver
+# 2. 修改 test_data/erp_vendor.yaml 中的占位符为真实测试数据
 
-# 3. 运行用例
-pytest tests/test_purchase.py -v
+# 3. 运行全部用例
+pytest test_cases/ -v
 
-# 4. 查看报告
-open report.html
+# 4. 仅运行登录测试
+pytest test_cases/test_erp_vendor.py::TestErpLogin -v
 ```
 
 ---
 
-## 📝 代码说明
+## 📊 实际应用效果
 
-本 demo 中的代码为脱敏后的框架骨架，展示了：
-- POM 设计模式和页面对象分层
-- BasePage 通用封装思路
-- YAML 数据驱动方案
-- pytest 与 Jenkins CI 集成方式
+- ERP 供应商模块新增/查询高频流程实现 UI 自动化
+- 与接口自动化联动形成「接口冒烟 → UI 核心链路」回归策略
+- 验证码自动识别 + 显式等待大幅降低用例执行时间和假阳性
 
-完整实际代码因涉及公司业务逻辑已脱敏，如需交流框架设计细节欢迎联系。
+---
+
+## 🔐 脱敏说明
+
+本 demo 中所有敏感信息已替换为占位符（`[ERP_BASE_URL]`、`[ERP测试账号]` 等），运行前请替换为真实的测试环境数据。
+
+---
