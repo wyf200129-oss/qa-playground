@@ -1,0 +1,18 @@
+-
+  # ====== 登录接口 ======
+  login:
+    method: post
+    path: /user_services/login
+    json:
+      username: "[ERP测试账号]"
+      password: "[ERP测试密码]"
+
+  # ====== 用户信息接口（token 自动注入） ======
+  userInfo:
+    method: get
+    path: /user_services/user_info
+
+  # ====== 预期断言值（替换为实际期望） ======
+  expect:
+    username: "[期望用户名]"
+    role: "[期望角色]"
