@@ -43,7 +43,7 @@ pipeline {
                     '''
                 }
                 // 把 allure-results 复制到 workspace 根目录
-                bat 'xcopy /s /y /i "automation-demos\ui-pom\allure-results" "allure-results\\"'
+                bat 'xcopy /s /y /i "automation-demos/ui-pom/allure-results" "allure-results\\"'
             }
             post {
                 always {
