@@ -37,10 +37,10 @@ pipeline {
             steps {
                 echo '🧪 执行 Mock CI 演示测试（全流程 Mock，不依赖 ERP 后端）...'
                 dir('automation-demos/ui-pom') {
-                    bat '''
+                    bat """
                         call .venv/Scripts/activate.bat
-                        python -m pytest test_cases/test_mock_ci.py -v --tb=short --alluredir=%ALLURE_RESULTS_DIR% -p no:warnings
-                    '''
+                        python -m pytest test_cases/test_mock_ci.py -v --tb=short --alluredir=${WORKSPACE}/allure-results -p no:warnings
+                    """
                 }
             }
             post {
@@ -54,7 +54,7 @@ pipeline {
         stage('Allure Report') {
             steps {
                 echo '📈 生成 Allure 测试报告...'
-                bat 'allure generate %ALLURE_RESULTS_DIR% --clean -o %ALLURE_REPORT_DIR%'
+                bat 'allure generate allure-results --clean -o allure-report'
                 allure includeProperties: false,
                        jdk: '',
                        report: 'allure-report',
