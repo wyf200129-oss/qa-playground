@@ -19,7 +19,7 @@ pipeline {
                 bat 'python --version'
 
                 echo '🔍 检查 Chrome...'
-                bat 'reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version 2>nul || echo Chrome not found in registry'
+                bat 'where chrome 2>nul || echo Chrome not in PATH (webdriver-manager will auto-download)'
             }
         }
 
