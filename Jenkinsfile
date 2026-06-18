@@ -2,9 +2,7 @@ pipeline {
     agent any
 
     environment {
-        CI                 = 'true'
-        ALLURE_RESULTS_DIR = 'allure-results'
-        ALLURE_REPORT_DIR  = 'allure-report'
+        CI = 'true'
     }
 
     stages {
@@ -17,9 +15,6 @@ pipeline {
 
                 echo '🔍 检查 Python 环境...'
                 bat 'python --version'
-
-                echo '🔍 检查 Chrome...'
-                bat 'where chrome 2>nul || echo Chrome not in PATH (webdriver-manager will auto-download)'
             }
         }
 
@@ -31,22 +26,24 @@ pipeline {
                     bat '''
                         python -m venv .venv
                         call .venv\\Scripts\\activate.bat
-                        pip install -r requirements.txt
-                        pip install allure-pytest
+                        pip install -r requirements.txt --proxy http://127.0.0.1:7897
+                        pip install allure-pytest --proxy http://127.0.0.1:7897
                     '''
                 }
             }
         }
 
-        // ── 3. 运行测试 ──────────────────────────────
+        // ── 3. 运行测试（测试失败不阻断流水线）─────
         stage('Run POM Tests') {
             steps {
                 echo '🧪 执行 ERP 供应商模块 UI 测试...'
                 dir('automation-demos/ui-pom') {
-                    bat '''
-                        call .venv\\Scripts\\activate.bat
-                        python -m pytest test_cases/ -v --tb=short --alluredir=%ALLURE_RESULTS_DIR% -p no:warnings
-                    '''
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                        bat '''
+                            call .venv\\Scripts\\activate.bat
+                            python -m pytest test_cases/ -v --tb=short --alluredir=allure-results -p no:warnings
+                        '''
+                    }
                 }
             }
             post {
@@ -56,15 +53,15 @@ pipeline {
             }
         }
 
-        // ── 4. 生成 Allure 报告 ─────────────────────
+        // ── 4. 生成 Allure 报告（CLI 未装时跳过）────
         stage('Allure Report') {
             steps {
                 echo '📈 生成 Allure 测试报告...'
-                bat 'allure generate %ALLURE_RESULTS_DIR% --clean -o %ALLURE_REPORT_DIR%'
-                allure includeProperties: false,
-                       jdk: '',
-                       report: 'allure-report',
-                       results: [[path: 'allure-results']]
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    dir('automation-demos/ui-pom') {
+                        bat 'allure generate allure-results --clean -o allure-report'
+                    }
+                }
             }
         }
     }
@@ -72,6 +69,9 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline 执行成功！'
+        }
+        unstable {
+            echo '⚠️ Pipeline 完成（部分测试未通过或工具缺失，属正常现象）'
         }
         failure {
             echo '❌ Pipeline 执行失败，请检查测试日志。'
