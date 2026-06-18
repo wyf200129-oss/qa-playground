@@ -73,7 +73,7 @@ pipeline {
             echo '❌ Pipeline 执行失败，请检查测试日志。'
         }
         always {
-            cleanWs()
+            echo 'Workspace kept for .venv reuse'
         }
     }
 }
