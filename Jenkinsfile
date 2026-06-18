@@ -24,7 +24,7 @@ pipeline {
                 dir('automation-demos/ui-pom') {
                     bat '''
                         python -m venv .venv
-                        call .venv\Scripts\activate.bat
+                        call .venv/Scripts/activate.bat
                         pip install -r requirements.txt
                         pip install allure-pytest
                     '''
@@ -38,7 +38,7 @@ pipeline {
                 echo '🧪 执行 Mock CI 演示测试（全流程 Mock，不依赖 ERP 后端）...'
                 dir('automation-demos/ui-pom') {
                     bat '''
-                        call .venv\Scripts\activate.bat
+                        call .venv/Scripts/activate.bat
                         python -m pytest test_cases/test_mock_ci.py -v --tb=short --alluredir=%ALLURE_RESULTS_DIR% -p no:warnings
                     '''
                 }
