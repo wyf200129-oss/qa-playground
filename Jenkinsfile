@@ -9,15 +9,11 @@ pipeline {
 
     stages {
 
-        // ── 1. 环境检查 ──────────────────
+        // ── 1. 环境检查 ────────────────────────────
         stage('Env Check') {
             steps {
-
                 echo '🔍 检查 Python 环境...'
-                bat 'python --version'
-
-                echo '🔍 检查 Chrome...'
-                bat 'where chrome 2>nul || echo Chrome not in PATH (webdriver-manager will auto-download)'
+                bat 'python --version && echo Python OK'
             }
         }
 
@@ -28,7 +24,7 @@ pipeline {
                 dir('automation-demos/ui-pom') {
                     bat '''
                         python -m venv .venv
-                        call .venv\\Scripts\\activate.bat
+                        call .venv\Scripts\activate.bat
                         pip install -r requirements.txt
                         pip install allure-pytest
                     '''
@@ -42,7 +38,7 @@ pipeline {
                 echo '🧪 执行 Mock CI 演示测试（全流程 Mock，不依赖 ERP 后端）...'
                 dir('automation-demos/ui-pom') {
                     bat '''
-                        call .venv\\Scripts\\activate.bat
+                        call .venv\Scripts\activate.bat
                         python -m pytest test_cases/test_mock_ci.py -v --tb=short --alluredir=%ALLURE_RESULTS_DIR% -p no:warnings
                     '''
                 }
