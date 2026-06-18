@@ -37,11 +37,13 @@ pipeline {
             steps {
                 echo '🧪 执行 Mock CI 演示测试（全流程 Mock，不依赖 ERP 后端）...'
                 dir('automation-demos/ui-pom') {
-                    bat """
+                    bat '''
                         call .venv/Scripts/activate.bat
-                        python -m pytest test_cases/test_mock_ci.py -v --tb=short --alluredir=${WORKSPACE}/allure-results -p no:warnings
-                    """
+                        python -m pytest test_cases/test_mock_ci.py -v --tb=short --alluredir=allure-results -p no:warnings
+                    '''
                 }
+                // 把 allure-results 复制到 workspace 根目录
+                bat 'xcopy /s /y /i "automation-demos\ui-pom\allure-results" "allure-results\\"'
             }
             post {
                 always {
