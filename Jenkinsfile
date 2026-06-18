@@ -9,11 +9,9 @@ pipeline {
 
     stages {
 
-        // ── 1. 拉取代码 + 环境检查 ──────────────────
-        stage('Checkout') {
+        // ── 1. 环境检查 ──────────────────
+        stage('Env Check') {
             steps {
-                echo '📥 拉取 qa-playground 仓库代码...'
-                checkout scm
 
                 echo '🔍 检查 Python 环境...'
                 bat 'python --version'
