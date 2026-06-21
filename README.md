@@ -72,6 +72,10 @@ test_cases/test_mock_ci.py::TestConfig::test_page_object_imports             PAS
 
 > 演示用例采用全流程 Mock，不依赖任何真实后端，任何人 clone 后可直接 `Build Now` 复现全绿结果。
 
+### Allure 测试报告预览
+
+![Allure Report](./assets/allure-report-screenshot.png)
+
 ### 快速复现
 
 1. Fork 本仓库
