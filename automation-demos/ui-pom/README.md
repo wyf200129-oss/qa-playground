@@ -65,6 +65,43 @@ ui-pom/
 | `pom-test-data` | 数据双分离：`validate/` 自检数据与正式数据独立，pytest 后幂等递增 |
 | `pom-todo-progress` | Todo 驱动：全流程任务面板可见，每步 `in_progress → completed` |
 
+> **实际效果**：基于 5 条规则 + Skill，实现「截图 → 页面对象 → 自检 → 用例 → pytest → Allure → 幂等」一键式自动化流程。定位器失败自愈机制支持 id>name>css>xpath 优先级自动分析替换（最多 3 次重试），流水线任一步骤失败即停、等待人工确认，保证输出质量可控。
+
+**Skill 12 步标准流水线**（`pom-screenshot-pipeline`）：
+
+```
+analyze → code-scan → page-object → validate-data → registry
+  → self-check → test-data → fixture → test-case → pytest-run
+    → allure-report → bump-data
+```
+
+| 步骤 | 说明 | 完成标志 |
+|:---|:---|:---|
+| `analyze` | 分析截图：页面名、PATH、元素、业务流程 | 输出 module/PATH/主方法 |
+| `code-scan` | 扫描 login_page、conftest、同类 page_object | 确认可复用模板 |
+| `page-object` | 生成 `page_object/{module}_page.py` | 文件已写入 |
+| `validate-data` | 生成 `test_data/validate/{module}.yaml` | 与正式数据隔离 |
+| `registry` | 注册 `PAGE_REGISTRY` | 映射已添加 |
+| `self-check` | 运行 `validate_page_object.py` | exit 0 |
+| `test-data` | 生成正式 `test_data/{module}.yaml` | 文件已写入 |
+| `fixture` | conftest 注册 `{module}_page` fixture | fixture 已添加 |
+| `test-case` | 生成 `test_cases/test_{module}.py` 用例 | 用例已写入 |
+| `pytest-run` | 运行 pytest | PASSED |
+| `allure-report` | `allure generate` 生成报告 | 报告路径可用 |
+| `bump-data` | `bump_test_data.py` 递增唯一字段 | YAML 已更新 |
+
+**定位器失败修复子流程**（`pom-locator-repair` 规则触发）：
+
+```
+定位失败 → repair-diagnose（确认报错，保存 DOM 快照）
+         → repair-attempt-1（id→name→css→xpath 优先级替换，重跑）
+         → repair-attempt-2（若还失败，换策略）
+         → repair-attempt-3（最后一次尝试）
+         → 仍失败 → blocked（停止，等待人工确认）
+```
+
+> **Todo 驱动执行机制**：全流程由 Cursor 任务面板实时可见，每个 Todo 项严格遵循 `in_progress → 执行 → completed` 的节奏，禁止后台静默连续执行后一次性汇报。
+
 ---
 
 ## 🎯 框架亮点
