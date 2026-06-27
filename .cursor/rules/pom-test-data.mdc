@@ -1,0 +1,39 @@
+---
+description: POM 测试数据分离与幂等——validate 与正式数据不得混用
+globs: pytest_pom/test_data/**,pytest_pom/test_cases/**
+alwaysApply: false
+---
+
+# POM 测试数据规范
+
+## 双文件分离
+
+| 用途 | 路径 | 使用者 |
+|------|------|--------|
+| 页面对象自检 | `test_data/validate/{module}.yaml` | `scripts/validate_page_object.py` |
+| 正式 pytest | `test_data/{module}.yaml` | `test_cases/test_{module}.py` |
+
+- 两份 YAML 的 **唯一字段必须不同**（如 `name`、单号）
+- 命名建议：自检 `{业务}Validate01`；正式 `{业务}Pom测试{序号}`
+
+## 幂等递增
+
+pytest **PASSED** 后执行：
+
+```bash
+python scripts/bump_test_data.py --file test_data/{module}.yaml --fields {biz_key}.{unique_field} --strategy suffix
+```
+
+- 仅递增 **正式** YAML，不修改 `validate/` 目录
+- 常见唯一字段：`name`、`order_no`、`billNo`
+
+## YAML 格式
+
+- 顶层必须为列表 `-`
+- 业务数据放在具名键下（如 `depot:`、`vendor:`）
+- `wait` 可选，默认 3
+
+## Todo 关联
+
+- 创建/修改 YAML 须在 Todo `validate-data` 或 `test-data` 为 `in_progress` 时执行
+- `bump-data` Todo 完成后才执行 `bump_test_data.py`

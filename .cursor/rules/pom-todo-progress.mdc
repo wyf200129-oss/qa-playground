@@ -1,0 +1,104 @@
+---
+description: POM 全工作流必须以 TodoWrite 驱动执行，进度在任务面板可见，禁止 Agent 静默连跑
+alwaysApply: true
+---
+
+# POM Todo 驱动执行（最高优先级）
+
+> **核心原则**：所有 POM 相关工作流 **由 Todo 驱动、分阶段展示**，用户在 Cursor **任务面板** 实时查看进度。  
+> Agent **不得**在后台静默连续执行多个阶段后再一次性汇报。
+
+## 第一条：Todo 先行（第一个工具调用）
+
+收到以下任一请求时，**第一个工具调用必须是 `TodoWrite(merge=false)`**：
+
+- 截图生成页面对象 / 完整自动化
+- 新增或修改测试用例 / 测试数据
+- 页面对象自检、pytest 执行、Allure 报告
+- 元素定位失败修复
+- 用例增删改（如新增删除步骤）
+
+**在 Todo 列表创建完成之前**，禁止：写文件、跑命令、批量读代码。
+
+## 第二条：单步执行节奏（强制）
+
+每个 Todo 项严格按以下节奏，**一步一更新**：
+
+```
+TodoWrite → 当前项 in_progress
+    ↓
+仅执行该项对应的工作（代码/命令/分析）
+    ↓
+TodoWrite → 当前项 completed
+    ↓
+再开始下一项 in_progress
+```
+
+**禁止：**
+- 连续执行多个阶段后一次性更新全部 Todo
+- 跳过 `in_progress` 直接 `completed`
+- 同时两项及以上 `in_progress`
+- 不更新 Todo 就进入下一阶段
+
+## 第三条：标准 Todo 清单（截图流水线）
+
+| id | 内容 | 完成标志 |
+|----|------|----------|
+| `analyze` | 分析截图/需求：页面名、PATH、元素、业务流程 | 输出 module/PATH/主方法 |
+| `code-scan` | 扫描 login_page、conftest、同类 page_object | 确认可复用模板 |
+| `page-object` | 生成 `page_object/{module}_page.py` | 文件已写入 |
+| `validate-data` | 生成 `test_data/validate/{module}.yaml` | 与正式数据不同 |
+| `registry` | 注册 `PAGE_REGISTRY` | 映射已添加 |
+| `self-check` | 运行 `validate_page_object.py` | exit 0 |
+| `test-data` | 生成 `test_data/{module}.yaml` | 文件已写入 |
+| `fixture` | conftest 注册 `{module}_page` | fixture 已添加 |
+| `test-case` | 生成 `test_cases/test_{module}.py` | 用例已写入 |
+| `pytest-run` | 运行 pytest | PASSED |
+| `allure-report` | `allure generate` | 报告路径可用 |
+| `bump-data` | `bump_test_data.py` 递增唯一字段 | YAML 已更新 |
+
+## 第四条：子工作流 Todo（元素修复）
+
+定位失败触发修复时，**追加或创建**子 Todo（不超过 3 次）：
+
+| id | 内容 |
+|----|------|
+| `repair-diagnose` | 确认元素报错，保存 DOM 快照 |
+| `repair-attempt-1` | 第 1 次定位修复并重试 |
+| `repair-attempt-2` | 第 2 次（若需要） |
+| `repair-attempt-3` | 第 3 次（若需要） |
+
+每次修复尝试：**in_progress → 改代码/重跑 → completed 或 blocked**。  
+3 次仍失败 → 标记 blocked，**停止**，等待用户确认。
+
+## 第五条：用例变更 Todo（示例）
+
+修改已有用例（如新增删除步骤）时至少包含：
+
+| id | 内容 |
+|----|------|
+| `analyze-change` | 分析变更范围 |
+| `update-page-object` | 更新页面对象方法 |
+| `update-test-case` | 更新用例步骤 |
+| `pytest-run` | 验证 PASSED |
+
+## 第六条：用户可见性
+
+- **进度以 Todo 面板为准**，不是 Agent 文字描述
+- 每完成一项 Todo，可在回复中用 **一行** 说明结果（可选，不替代 Todo 更新）
+- 失败时：失败项保持 `in_progress` 或标为 blocked；后续项保持 `pending`
+
+## 第七条：完成汇总（全部 completed 后）
+
+- 新增/修改文件清单
+- pytest / 自检结果
+- 报告路径、递增后的数据值
+
+## 第八条：豁免场景
+
+以下场景 **不需要** TodoWrite：
+
+- 纯问答（解释代码、说明规范，不修改文件、不跑命令）
+- 只读代码审查（用户未要求执行或修复）
+
+其余凡涉及写文件、跑 pytest/自检/报告、修改用例/页面对象，**均须 Todo 驱动**。

@@ -1,0 +1,5 @@
+- person:
+    name: 经手人Pom测试05
+    type: 财务员
+    sort: '1'
+  wait: 3

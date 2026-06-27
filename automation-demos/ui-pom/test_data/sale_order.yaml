@@ -1,0 +1,8 @@
+-
+  order:
+    customer: 客户3
+    goods_name: 西瓜
+    quantity: 1
+    price: 100
+    remark: 自动化测试订单
+  wait: 3

@@ -1,0 +1,10 @@
+-
+  depot:
+    name: 仓库Validate01
+    address: 深圳市福田区
+    warehousing: '0.1'
+    truckage: '5'
+    principal: test123
+    sort: '99'
+    remark: 页面对象自检数据
+  wait: 3

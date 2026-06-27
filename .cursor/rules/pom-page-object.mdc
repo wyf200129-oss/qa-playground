@@ -1,0 +1,35 @@
+---
+description: 页面对象编写与自检要求——生成后必须 validate
+globs: pytest_pom/page_object/**
+alwaysApply: false
+---
+
+# 页面对象规范
+
+## 结构
+
+- 继承 `BasePage`，定义 `PATH`
+- 定位器：id > name > css selector > 相对 xpath；禁止 Vue `data-v-*` 及 UUID 等动态 id
+- 相对 xpath 须锚定稳定容器（form id、label 文本、ant-modal-footer 等）
+- 每个 public 方法写函数级 docstring
+
+## Todo 关联
+
+- 生成/修改页面对象须在 Todo `page-object` 或 `update-page-object` 为 `in_progress` 时执行
+- 不得在未创建 Todo 的情况下直接写 page_object 文件
+
+## 生成后必做自检
+
+```bash
+cd pytest_pom
+python scripts/validate_page_object.py --page {module} --data test_data/validate/{module}.yaml
+```
+
+- 新页面需在 `scripts/validate_page_object.py` 的 `PAGE_REGISTRY` 注册映射
+- 自检失败 → 修复定位器/方法，**不得**进入用例编写
+
+## 常见定位陷阱
+
+- 弹窗容器可能是 `<form id="xxxModal">` 而非 `<div>`
+- Ant Design 按钮文本可能含空格（如「保 存」），优先用 `ant-btn-primary`
+- `click_close` 已优化隐式等待；可选元素查找不应阻塞 10 秒

@@ -1,0 +1,9 @@
+- depot:
+    name: 仓库Pom测试05
+    address: 深圳市南山区
+    warehousing: '0.5'
+    truckage: '10'
+    principal: test123
+    sort: '1'
+    remark: POM自动化测试仓库
+  wait: 3

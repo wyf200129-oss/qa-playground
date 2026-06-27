@@ -1,0 +1,6 @@
+-
+  person:
+    name: 经手人Validate01
+    type: 销售员
+    sort: '99'
+  wait: 3

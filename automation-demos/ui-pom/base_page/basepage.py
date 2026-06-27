@@ -1,93 +1,69 @@
-"""
-BasePage 基类 —— Selenium 操作行为统一封装。
+from time import sleep
 
-职责：
-  - 元素定位、输入、点击、断言
-  - 显式等待策略（替代 time.sleep）
-  - 验证码自动识别（ddddocr）
+from selenium.common.exceptions import WebDriverException
 
-设计原则：
-  - 所有 Page Object 继承此类，避免重复封装
-  - driver 对象由外部（pytest fixture）注入，保证单次测试链路复用同一个浏览器实例
-"""
-
-import ddddocr
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from utils.element_repair import find_element_with_repair, is_element_error
 
 
 class BasePage:
-    """Selenium 页面操作基类"""
+    IMPLICIT_WAIT = 10
 
-    def __init__(self, driver: WebDriver):
+    def __init__(self, driver, base_url=''):
         self.driver = driver
-        self.driver.implicitly_wait(5)
+        self.base_url = base_url.rstrip('/')
+        self.driver.implicitly_wait(self.IMPLICIT_WAIT)
 
-    # ── 基础操作 ──────────────────────────────────
-
-    def open(self, url: str) -> None:
-        """访问指定 URL"""
+    def open(self, url):
         self.driver.get(url)
 
-    def locator(self, by: str, value: str) -> WebElement:
-        """定位单个元素"""
-        return self.driver.find_element(by, value)
+    def open_path(self, path):
+        self.open(f'{self.base_url}{path}')
 
-    def input(self, by: str, value: str, txt: str) -> None:
-        """输入文本（自动清空后填入）"""
-        el = self.locator(by, value)
-        el.clear()
-        el.send_keys(txt)
+    def locator(self, by, value, key=''):
+        """
+        定位单个元素；key 为定位器名称（如 delete_confirm），用于失败修复与缓存。
+        """
+        try:
+            return find_element_with_repair(
+                self.driver, self.__class__.__name__, key, by, value,
+            )
+        except WebDriverException:
+            raise
 
-    def click(self, by: str, value: str) -> None:
-        """点击元素"""
-        self.locator(by, value).click()
+    def input(self, by, value, txt, key=''):
+        """定位元素并输入文本。"""
+        self.locator(by, value, key=key).send_keys(txt)
 
-    def quit(self) -> None:
-        """关闭浏览器"""
+    def click(self, by, value, key=''):
+        """定位元素并点击。"""
+        self.locator(by, value, key=key).click()
+
+    def quit(self):
         self.driver.quit()
 
-    # ── 等待策略 ──────────────────────────────────
+    def wait(self, time_):
+        sleep(int(time_))
 
-    def wait_for_visible(self, by: str, value: str, timeout: int = 10) -> WebElement:
-        """显式等待元素可见"""
-        return WebDriverWait(self.driver, timeout).until(
-            EC.visibility_of_element_located((by, value))
-        )
-
-    def wait_for_invisible(self, by: str, value: str, timeout: int = 10) -> bool:
-        """显式等待元素不可见（如弹窗关闭）"""
-        return WebDriverWait(self.driver, timeout).until(
-            EC.invisibility_of_element_located((by, value))
-        )
-
-    def wait_for_url_change(self, old_url: str, timeout: int = 20) -> bool:
-        """等待 URL 变更（常用于登录后跳转验证）"""
-        return WebDriverWait(self.driver, timeout).until(
-            lambda d: d.current_url != old_url
-        )
-
-    # ── 断言 ──────────────────────────────────────
-
-    def assert_text(self, expected: str, by: str, value: str) -> None:
-        """断言元素文本与预期一致"""
-        reality = self.locator(by, value).text
+    def assert_text(self, expected, by, value, key=''):
+        """断言元素文本是否匹配。"""
+        reality = self.locator(by, value, key=key).text
         assert expected == reality, (
-            f"文本断言失败：预期「{expected}」，实际「{reality}」"
+            f'预期结果为{expected}，实际结果为{reality}。\n{expected} != {reality}'
         )
 
-    def assert_element_present(self, by: str, value: str) -> None:
-        """断言元素存在于页面"""
+    def click_close(self, by, value):
+        """关闭可选弹窗/通知；不存在时立即跳过，避免隐式等待空等。"""
+        self.driver.implicitly_wait(0)
         try:
-            self.wait_for_visible(by, value, timeout=5)
-        except Exception:
-            raise AssertionError(f"元素未找到：{by}={value}")
+            for el in self.driver.find_elements(by, value):
+                el.click()
+        finally:
+            self.driver.implicitly_wait(self.IMPLICIT_WAIT)
 
-    # ── 验证码识别 ────────────────────────────────
+    def get_png(self):
+        return self.driver.get_screenshot_as_png()
 
-    def get_code(self, by: str, value: str) -> str:
-        """截图验证码图片并用 ddddocr 识别返回文本"""
-        img_bytes = self.locator(by, value).screenshot_as_png
-        return ddddocr.DdddOcr().classification(img_bytes)
+    @staticmethod
+    def should_repair(exc):
+        """判断异常是否属于元素定位失败（可触发修复流程）。"""
+        return is_element_error(exc)

@@ -1,0 +1,57 @@
+---
+description: 元素定位失败时的 DOM 分析、自愈修复与失败缓存——须纳入 Todo 子流程
+globs: pytest_pom/base_page/**,pytest_pom/page_object/**,pytest_pom/utils/**
+alwaysApply: false
+---
+
+# 元素定位失败修复规范
+
+> 修复流程须遵循 `pom-todo-progress.mdc`：追加 `repair-*` 子 Todo，**逐步**诊断与重试，禁止静默连修。
+
+## 触发条件
+
+**仅**元素定位失败（`NoSuchElementException` 等）触发；断言/业务/网络错误 → **直接抛出**，Todo 标 blocked，**等待用户确认**。
+
+## 修复 Todo 子流程
+
+```
+repair-diagnose (in_progress)
+  → 确认元素报错 + 保存 DOM 快照
+  → completed
+
+repair-attempt-1 (in_progress)
+  → 按策略修改定位器 + 重跑
+  → completed 或进入 attempt-2
+
+repair-attempt-2 / repair-attempt-3（同上，合计 ≤ 3 次）
+
+仍失败 → blocked，停止，展示报错
+```
+
+**每轮修复前** `TodoWrite(merge=true)` 更新；**禁止**不更新 Todo 连续尝试 3 次。
+
+## 定位优先级
+
+```
+id  →  name  →  css selector  →  相对 xpath（锚定稳定容器）
+```
+
+## 禁止动态元素
+
+- `data-v-*`、`data-__*`、UUID id、`rcDialogTitle0` 等
+- 含动态特征的备选方案直接跳过
+
+## 相对 xpath 锚点
+
+```python
+'//form[@id="personModal"]//input[@id="name"]'
+'//label[contains(.,"姓名")]/following-sibling::div//input'
+'//div[contains(@class,"ant-popover-buttons")]//button[contains(@class,"ant-btn-primary")]'
+```
+
+## 技术流程（每轮 repair-attempt 内）
+
+1. 查 `log/locator_failure_cache.json`，跳过已失败方案
+2. `locator_strategy.suggest_locators()` 按优先级生成备选
+3. 修改 `page_object/*.py` 后重跑对应用例/自检
+4. 失败写入缓存；成功则 `repair-*` → completed，恢复主流程 Todo
