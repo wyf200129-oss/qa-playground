@@ -12,7 +12,7 @@ ui-pom/
 ├── pytest.ini                     # pytest 配置文件
 ├── requirements.txt               # Python 依赖
 ├── base_page/
-│   ├── basepage.py               # Selenium 操作封装 + 显式等待 + ddddocr 验证码识别
+│   ├── basepage.py               # Selenium 操作封装 + 显式等待
 │   └── __init__.py
 ├── page_object/
 │   ├── login_page.py             # 登录页（验证码自动识别）
@@ -91,15 +91,7 @@ self.wait_for_url_change(self.url, timeout=20)           # 登录后 URL 跳转
 self.wait_for_invisible(*self.vendor_modal, timeout=10)    # 弹窗关闭
 ```
 
-### 3. 验证码自动识别（ddddocr）
-
-```python
-def get_code(self, by, value):
-    img_bytes = self.locator(by, value).screenshot_as_png
-    return ddddocr.DdddOcr().classification(img_bytes)
-```
-
-### 4. YAML 数据驱动 + 双文件分离
+### 3. YAML 数据驱动 + 双文件分离
 
 ```yaml
 # test_data/login.yaml（正式数据）
@@ -113,7 +105,7 @@ person:
   phone: "13800138001"
 ```
 
-### 5. 定位器自愈修复
+### 4. 定位器自愈修复
 
 ```python
 # 元素定位失败时自动尝试 id → name → css → xpath 优先级替换
@@ -124,14 +116,14 @@ from utils.locator_failure_cache import LocatorFailureCache
 # ≤3 次重试，超限写入缓存并等待人工确认
 ```
 
-### 6. 幂等数据递增
+### 5. 幂等数据递增
 
 ```python
 # pytest 跑完后自动递增 YAML 中唯一字段（编号、名称等），确保下次运行不冲突
 python scripts/bump_test_data.py
 ```
 
-### 7. webdriver-manager 自动管理驱动
+### 6. webdriver-manager 自动管理驱动
 
 ```python
 from webdriver_manager.chrome import ChromeDriverManager

@@ -10,7 +10,7 @@ Mock 范围：
   - BasePage 方法   : Mock 覆盖 open/input/click/wait 等
   - 验证码识别       : Mock 返回固定值
 
-不依赖：Chrome、WebDriver、ERP 后端、ddddocr 识别准确率
+不依赖：Chrome、WebDriver、ERP 后端
 """
 
 import pytest

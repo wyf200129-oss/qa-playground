@@ -25,7 +25,7 @@
 | 类别 | 技能 |
 |------|------|
 | **语言** | Python |
-| **UI 自动化** | Selenium · POM 设计模式 · YAML 数据驱动 · ddddocr 验证码识别 · Cursor 截图驱动流水线 |
+| **UI 自动化** | Selenium · POM 设计模式 · YAML 数据驱动 · Cursor 截图驱动流水线 |
 | **接口自动化** | Requests · 关键字驱动 · JSONPath · pytest-allure |
 | **CI/CD** | Jenkins Pipeline · Allure Report 插件 · Git SCM |
 | **性能测试** | JMeter · TPS / 95线 / 错误率分析 |
@@ -124,13 +124,6 @@ test_cases/test_mock_ci.py::TestConfig::test_page_object_imports             PAS
 ```python
 self.wait_for_url_change(self.url, timeout=20)         # 登录后 URL 跳转
 self.wait_for_invisible(*self.vendor_modal, timeout=10)  # 弹窗关闭
-```
-
-**✅ ddddocr 验证码自动识别**
-```python
-def get_code(self, by, value):
-    img_bytes = self.locator(by, value).screenshot_as_png
-    return ddddocr.DdddOcr().classification(img_bytes)
 ```
 
 **✅ YAML 数据驱动，测试数据与代码完全分离**
