@@ -14,7 +14,7 @@
 
 财务管理专业出身，在校期间主动转型软件测试，毕业即拿到测试开发 Offer。
 
-目前具备 **2.5 年 Web/App 双端测试开发经验**，擅长接口自动化与 UI 自动化框架搭建，在国内较早探索并落地 AI 辅助测试方案，取得了 **用例设计工时缩短 50%、需求场景覆盖率由 80% 提升至 95%** 的实际效果。
+目前具备 **2.5 年 Web/App 双端测试开发经验**，擅长接口自动化与 UI 自动化框架搭建，基于 Cursor .cursorrules 定制 POM 截图驱动自动化流水线，在国内较早探索并落地 AI 辅助测试方案，取得了 **用例设计工时缩短 50%、需求场景覆盖率由 80% 提升至 95%** 的实际效果。
 
 **期望城市：大连** | 📧 346296043@qq.com | 📱 18840823821
 
@@ -25,13 +25,13 @@
 | 类别 | 技能 |
 |------|------|
 | **语言** | Python |
-| **UI 自动化** | Selenium · POM 设计模式 · YAML 数据驱动 · ddddocr 验证码识别 |
+| **UI 自动化** | Selenium · POM 设计模式 · YAML 数据驱动 · ddddocr 验证码识别 · Cursor 截图驱动流水线 |
 | **接口自动化** | Requests · 关键字驱动 · JSONPath · pytest-allure |
 | **CI/CD** | Jenkins Pipeline · Allure Report 插件 · Git SCM |
 | **性能测试** | JMeter · TPS / 95线 / 错误率分析 |
 | **App 测试** | adb 调试 · Monkey 稳定性测试 · Fiddler 抓包 |
 | **数据库** | MySQL 多表联查 |
-| **工具链** | Git · Docker · Linux Shell · 禅道 · Cursor AI |
+| **工具链** | Git · Docker · Linux Shell · 禅道 · Cursor AI · .cursorrules |
 
 ---
 
@@ -42,6 +42,7 @@ qa-playground/
 ├── automation-demos/
 │   ├── ui-pom/          # 🖥️  POM + YAML UI 自动化框架（Selenium + pytest）
 │   └── api-keyword/     # 🔌  关键字驱动接口自动化框架（Requests + pytest）
+├── .cursor/             # 🎯  Cursor 截图驱动流水线（5条规则 + 1个 Skill）
 ├── ai-testing/          # 🤖  AI 辅助测试工作流与实践
 ├── ci/                  # 🐳  Docker 相关配置
 └── Jenkinsfile          # 🚀  Jenkins Pipeline（4 个 Stage，含 Allure Report）
@@ -86,21 +87,38 @@ test_cases/test_mock_ci.py::TestConfig::test_page_object_imports             PAS
 
 ---
 
-## UI 自动化框架 — POM + YAML 数据驱动
+## UI 自动化框架 — POM + YAML + Cursor 截图驱动流水线
 
 **路径：`automation-demos/ui-pom/`**
 
-基于 Page Object Model 的三层分离架构，实际应用于 ERP 供应商管理模块。
+基于 Page Object Model 的多层分离架构，覆盖 ERP 销售、采购、仓库三大模块（12 类核心单据），累计 200+ 条 UI 自动化用例。
 
 ### 架构分层
 
 | 层 | 职责 |
 |----|------|
-| `base_page/` | Selenium 原子操作封装：定位、输入、点击、显式等待 |
-| `page_object/` | 页面业务流程：登录、新增供应商、查询 |
-| `test_cases/` | 用例编排与断言 |
+| `base_page/` | Selenium 原子操作封装：定位、输入、点击、显式等待、断言 |
+| `page_object/` | 页面业务对象：登录、采购、销售、仓库、人员、供应商 |
+| `test_cases/` | 用例编排与 Pytest 断言 |
+| `test_data/` + `validate/` | 测试数据双文件分离（正式数据 + 自检验证），幂等递增 |
+| `conf/` | 配置管理（Server 连接、YAML 加载、Options） |
+| `scripts/` | 工具脚本（自检、数据递增 bump） |
+| `utils/` | 位置策略、元素修复、失败缓存、浏览器封装 |
 
 ### 核心亮点
+
+**✅ Cursor .cursorrules 截图驱动全自动化流水线**
+
+5 条规则 + 1 个 Skill，实现「截图 → 页面对象 → 自检 → 用例 → pytest → Allure → 幂等」一键式流程：
+
+| 规则/技能 | 功能 | 核心机制 |
+|:---|:---|:---|
+| `pom-page-object` | 页面对象编写规范 | 继承 BasePage、定位器优先级 id>name>css>xpath |
+| `pom-locator-repair` | 定位器自愈修复 | 失败后自动分析 DOM → 替换定位器 → 重试（≤3次） |
+| `pom-pipeline-gate` | 12 步流水线门禁 | 一步失败即停，禁止静默跳过 |
+| `pom-test-data` | 数据双分离 | validate/ 自检数据与正式数据独立，pytest 后幂等递增 |
+| `pom-todo-progress` | Todo 驱动执行 | 全流程任务面板可见，一步 in_progress → completed |
+| `pom-screenshot-pipeline` (Skill) | 截图一键流水线 | 12 步：analyze → code-scan → page-object → ... → allure-report |
 
 **✅ 显式等待替代 sleep — 快 3 倍，消除假阳性**
 ```python
@@ -120,8 +138,16 @@ def get_code(self, by, value):
 login:
   user: "[ERP测试账号]"
   pwd:  "[ERP测试密码]"
-vendor:
-  name: "[供应商测试名称]"
+sale_order:
+  customer: "[客户名称]"
+  product: "[商品编码]"
+```
+
+**✅ 元素定位失败修复缓存**
+```python
+# 定位失败 → 自动尝试 id → name → css → xpath → 缓存修复记录 → 超 3 次等待人工
+from utils.locator_failure_cache import LocatorFailureCache
+from utils.element_repair import repair_locator
 ```
 
 [→ 查看详细文档](./automation-demos/ui-pom/README.md)
@@ -178,9 +204,9 @@ vendor:
 ### ERP 企业资源计划系统（2025.05 – 2026.03）
 面向服装企业的 Web + App 双端进销存系统，覆盖 13 个业务模块。
 
-- 主导采购/销售/库存三模块全流程测试，双端共 **360+ 条功能用例**
-- 独立搭建 POM UI 自动化 + 关键字驱动接口自动化双框架
-- **90 条用例接入 Jenkins 定时回归**
+- 主导采购/销售/库存三模块全流程测试，覆盖 12 类核心单据
+- 独立搭建 POM UI 自动化（200+ 条用例）+ 关键字驱动接口自动化（400+ 条用例）双框架，接入 Jenkins 定时回归
+- 基于 Cursor .cursorrules 定制 POM 截图驱动自动化流水线，实现定位器自愈修复与流水线门禁
 - 探索并落地 AI 大模型（ChatGPT/Kimi）+ RAG 辅助测试设计，用例设计工时缩短 50%
 
 ### CCAS 后台管理系统（2024.10 – 2025.04）
