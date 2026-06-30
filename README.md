@@ -40,9 +40,9 @@
 ```
 qa-playground/
 ├── automation-demos/
-│   ├── ui-pom/          # 🖥️  POM + YAML UI 自动化框架（Selenium + pytest）
-│   └── api-keyword/     # 🔌  关键字驱动接口自动化框架（Requests + pytest）
-├── .cursor/             # 🎯  Cursor 流水线规则（POM 5条 + 接口自动化 4条 + 9个 Skill）
+│   ├── ui-pom/          # 🖥️  POM + YAML UI 自动化框架（含 .cursor 截图驱动流水线）
+│   └── api-keyword/     # 🔌  AI 接口自动化框架（含 .cursor 契约驱动四阶段门禁）
+├── .cursor/             # 🎯  Cursor 全局 POM 流水线规则（5条 + 1 Skill）
 ├── ai-testing/          # 🤖  AI 辅助测试工作流与实践
 ├── ci/                  # 🐳  Docker 相关配置
 └── Jenkinsfile          # 🚀  Jenkins Pipeline（4 个 Stage，含 Allure Report）
@@ -147,11 +147,11 @@ from utils.element_repair import repair_locator
 
 ---
 
-## 接口自动化框架 — 关键字驱动
+## 接口自动化框架 — 关键字驱动 + Cursor 契约驱动
 
-**路径：`automation-demos/api-keyword/`**
+**路径：`automation-demos/api-keyword/`**（含 `.cursor/` 接口自动化规则与 Skill）
 
-基于 Requests 封装的关键字驱动接口框架，支持多环境一键切换、Token 自动注入、Allure 报告。
+基于 Requests 封装的关键字驱动接口框架，支持多环境一键切换、Token 自动注入、Allure 报告。搭配 4 条 Cursor 规则 + 3 个 Skill 实现 OpenAPI 契约驱动的四阶段门禁全流程。
 
 ### 设计亮点
 
