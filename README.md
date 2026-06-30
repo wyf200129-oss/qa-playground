@@ -26,7 +26,7 @@
 |------|------|
 | **语言** | Python |
 | **UI 自动化** | Selenium · POM 设计模式 · YAML 数据驱动 · Cursor 截图驱动流水线 |
-| **接口自动化** | Requests · 关键字驱动 · JSONPath · pytest-allure |
+| **接口自动化** | Requests · 关键字驱动 · JSONPath · pytest-allure · Cursor 契约驱动流水线 |
 | **CI/CD** | Jenkins Pipeline · Allure Report 插件 · Git SCM |
 | **性能测试** | JMeter · TPS / 95线 / 错误率分析 |
 | **App 测试** | adb 调试 · Monkey 稳定性测试 · Fiddler 抓包 |
@@ -42,7 +42,7 @@ qa-playground/
 ├── automation-demos/
 │   ├── ui-pom/          # 🖥️  POM + YAML UI 自动化框架（Selenium + pytest）
 │   └── api-keyword/     # 🔌  关键字驱动接口自动化框架（Requests + pytest）
-├── .cursor/             # 🎯  Cursor 截图驱动流水线（5条规则 + 1个 Skill）
+├── .cursor/             # 🎯  Cursor 流水线规则（POM 5条 + 接口自动化 4条 + 9个 Skill）
 ├── ai-testing/          # 🤖  AI 辅助测试工作流与实践
 ├── ci/                  # 🐳  Docker 相关配置
 └── Jenkinsfile          # 🚀  Jenkins Pipeline（4 个 Stage，含 Allure Report）
@@ -199,7 +199,7 @@ from utils.element_repair import repair_locator
 
 - 主导采购/销售/库存三模块全流程测试，覆盖 12 类核心单据
 - 独立搭建 POM UI 自动化（200+ 条用例）+ 关键字驱动接口自动化（400+ 条用例）双框架，接入 Jenkins 定时回归
-- 基于 Cursor .cursorrules 定制 POM 截图驱动自动化流水线，实现定位器自愈修复与流水线门禁
+- 基于 Cursor .cursorrules 定制双端自动化流水线：POM 截图驱动（定位器自愈+12步门禁）+ 接口契约驱动（四阶段门禁+body/status联合断言）
 - 探索并落地 AI 大模型（ChatGPT/Kimi）+ RAG 辅助测试设计，用例设计工时缩短 50%
 
 ### CCAS 后台管理系统（2024.10 – 2025.04）

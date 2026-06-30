@@ -1,0 +1,45 @@
+---
+description: >-
+  接口测试用例文档落盘至工作区根目录 接口用例集/、接口数据集/、接口用例简报集/；
+  契约与脚本仍在 6.测试用例生成/
+globs: "**/接口用例集/**/*,**/接口数据集/**/*,**/接口用例简报集/**/*"
+alwaysApply: false
+---
+
+# 接口用例生成：落盘路径
+
+生成 **接口测试用例文档**（Markdown 表 + YAML 数据 + Check 简报）时，须遵守：
+
+## 1. 根目录落盘（强制）
+
+| 产物 | 路径（相对于工作区根目录） |
+|------|--------------------------|
+| 用例主表 | `接口用例集/{domain}/cases.md` |
+| 请求数据 | `接口数据集/{domain}/{用例编号}.yaml` |
+| 二次 Check 简报 | `接口用例简报集/{domain}_check_brief_{YYYYMMDD_HHMM}.md` |
+
+**禁止** 将接口用例写入 `6.测试用例生成/接口用例集/` 或其他课程子目录。
+
+## 2. 契约与脚本（仍在课程目录）
+
+| 资源 | 路径 |
+|------|------|
+| OpenAPI 契约 | `6.测试用例生成/docs/contracts/` |
+| 二次 Check 脚本 | `6.测试用例生成/scripts/api_case_second_check.py` |
+
+```bash
+cd 6.测试用例生成
+python scripts/api_case_second_check.py --domain blackcore-mall --max-rounds 2
+```
+
+## 3. 与功能用例 / pytest 分轨
+
+| 类型 | 落盘目录 |
+|------|----------|
+| **功能用例** | `功能用例集/`（根目录） |
+| **接口用例文档** | `接口用例集/` + `接口数据集/` + `接口用例简报集/`（根目录） |
+| **pytest 代码** | 用户框架目录（如 `interface_frame/`） |
+
+## 4. Skill 引用
+
+细则见 [`.cursor/skills/测试用例生成/接口/SKILL.md`](../skills/测试用例生成/接口/SKILL.md)。

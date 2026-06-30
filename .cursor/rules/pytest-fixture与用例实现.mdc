@@ -1,0 +1,58 @@
+---
+description: pytest fixture 与测试用例实现的生成/重构约束（层数、scope、autouse、命名、parametrize ids、行为保留）
+globs: "**/{test,tests}/**/*,**/conftest.py,**/test_*.py"
+alwaysApply: false
+---
+
+# pytest fixture 与用例实现
+
+涉及 **pytest 测试代码、conftest、fixture、parametrize** 的新建或重构时，须遵守以下约束。细则与示例见 Skill [`.cursor/skills/pytest-fixture与用例实现/SKILL.md`](../skills/pytest-fixture与用例实现/SKILL.md)。
+
+## 1. 先方案，后修改
+
+遵守 Rule [`.cursor/rules/代码修改-先方案后执行.mdc`](./代码修改-先方案后执行.mdc)：首次回应须说明问题理解、修改建议、关联文件；**未获明确授权不得改文件**。
+
+## 2. Fixture 层数 ≤ 2
+
+- 从 **测试函数** 沿 `@pytest.fixture` 依赖向下计数，**不超过 2 层**。
+- 超过 2 层时：合并 fixture、内联单次依赖，或拆文件——**不得** 为「复用」堆叠抽象层。
+
+## 3. Scope 默认 function
+
+- 新建 fixture **默认** `scope="function"`（可省略不写）。
+- 使用 `session` / `module` / `class` 时，方案中须说明：**共享资源、创建成本、为何 function 不够、隔离风险**。
+- 理由不充分时，优先建议 `class` 或 `module`，而非 `session`。
+
+## 4. 命名体现业务
+
+- fixture 名须让维护者看出 **业务对象 + 状态/角色**（如 `logged_in_mall_user`、`order_pending_payload`）。
+- 禁止泛化/机械化命名：`setup_data`、`context`、`helper`、`manager`、`wrapper` 等。
+
+## 5. 保留原有用例行为
+
+- 重构目标为 **结构精简**（层数、scope、命名、重复 setup），**不得** 改变断言预期、请求参数语义或覆盖场景。
+- diff 中须能说明「行为等价」；删代码须注明原行为如何保留。
+
+## 6. Parametrize 必须提供业务化 ids
+
+- 使用 `@pytest.mark.parametrize` 时，**必须** 显式提供 `ids`，且每条 id 须关联 **业务场景 + 关键数据特征**，失败时能一眼定位问题。
+- **优先中文**描述（如 `有效JWT登录`、`订单金额为负`）；若项目统一英文 id，仍须完整语义，不得退化为编号。
+- **禁止**：纯数字（`0`、`1`）、单词+数字（`case1`、`test_2`、`data3`）、无业务含义的泛词（`invalid`、`error`）。
+- **conftest 配套**：须在同一测试目录的 `conftest.py` 中配置中文 ids 显示 hook（见 Skill §4「conftest 必须配置中文 ids 支持」）。
+
+## 7. autouse 默认关闭
+
+- **`autouse=True` 默认禁止**；优先显式注入 fixture，避免隐式副作用导致用例不稳定、难排查。
+- 若生成方案中确需 `autouse=True`，须 **先向用户说明**：影响范围、为何不能显式注入、排查方式；**用户确认后方可写入代码**。
+- 未经确认，**不得** 在 `conftest.py` 或测试代码中加入 `autouse=True`。
+
+## 生成后自检
+
+- [ ] fixture 链 ≤ 2 层
+- [ ] 非 function scope 已书面说明理由
+- [ ] 命名可读、有业务含义
+- [ ] parametrize 已提供业务化 ids（优先中文）
+- [ ] conftest 已配置中文 ids 显示 hook
+- [ ] **未使用 autouse=True**（若使用，已获用户确认并说明理由）
+- [ ] 原有用例行为未变
+- [ ] 已先方案、后修改

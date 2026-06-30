@@ -1,0 +1,84 @@
+---
+description: >-
+  接口测试须契约优先、禁止编造；Markdown 用例与 pytest 代码分轨；
+  pytest 走四阶段工作流（A试点→B→C全盘骨架→D全盘实现）；先读 AGENTS.md
+alwaysApply: true
+---
+
+# 接口用例生成：契约优先
+
+## 路由（必先判断任务类型）
+
+| 任务 | 走哪条路径 |
+|------|------------|
+| **接口自动化 pytest 代码**（骨架、conftest、Requests、Day_17） | Skill `接口自动化实现/SKILL.md` + Rule `接口自动化-pytest骨架与实现.mdc` → **先读** `interface_frame/WORKFLOW.md`、`AGENTS.md`、`工作流体系.md` |
+| **接口用例文档**（Markdown 表、接口数据集 YAML） | Skill `.cursor/skills/测试用例生成/接口/SKILL.md`（经统筹 Skill 路由） |
+| 仅 **运行 pytest / 修失败** | Skill `pytest失败修复闭环/SKILL.md` |
+
+**pytest 代码** 固定流程：A 试点流程骨架 → B 试点实现 → C 全盘骨架 → **人工评审** → D 全盘实现。不得跳过评审写满断言。
+
+---
+
+## 1. 先读契约，再写用例（需求 4）
+
+1. **必须先读取** OpenAPI 契约，来源优先级：
+   - 用户 @ 引用 / upload / Swagger URL
+   - 仓库默认：`6.测试用例生成/docs/contracts/`
+     - 清单：`6.测试用例生成/docs/contracts/README.md`
+     - 黑核商城全量：`6.测试用例生成/docs/contracts/blackcore-mall/openapi-swagger2.json`
+2. 生成前确认 `info.version`、目标 `path + method`、parameters、requestBody、responses、schemas。
+3. 若有 **业务方向节选**（用户单独提交），一并读取 → 见 Skill `业务节选接入.md`；PRD/节选 **不能** 替代契约协议/结构断言。
+
+## 2. 断言基本要求
+
+获取响应后，**先 body、再与 status 联合断言**；**状态码 → body 信息 → body 字段** 均须对齐 API 文档（OpenAPI `responses` / schema / examples）。
+
+| 层级 | 依据 | 说明 |
+|------|------|------|
+| HTTP 状态码 | 仅 operation `responses` 中 **已声明** 的码 | 与 body 联合校验，禁止仅断言 status |
+| body 信息 | `responses` 的 description、error 语义、整体结构 | 含错误文案、无成功态字段等 |
+| body 字段 | schema 中 **已出现** 的字段名、类型、required、enum | 禁止契约外必过字段 |
+| 业务语义（鉴权链、数据关联） | 业务节选 / PRD 或标 **开发待确认** | 不可替代结构断言 |
+
+**反向用例**：同样遵守 body → status 联合断言；断言须 **可判定、数据可复现、以稳定通过（绿色）为目标**——固定触发 + 契约内 status + body 错误要点；禁止「非 2xx 即可」或 flaky 设计。
+
+每条用例/TODO 须标注来源：`契约` / `业务节选` / `PRD` / `开发` / `框架`。
+
+## 3. 读不到契约时：禁止编造
+
+- 未成功读取契约 → **不得** 虚构 path、method、状态码、字段或示例数据。
+- 停止生成必过用例，告知用户需提供的路径或文件；仅输出「待确认」占位。
+- 不得用「常见 REST 惯例」或记忆猜测补全。
+
+## 3.1 PRD / 契约不清晰：写用例 vs 执行后优化
+
+| 阶段 | 做法 |
+|------|------|
+| **写用例 / 骨架** | **待确认** 占位；禁止编造；**禁止预设** xfail/skip |
+| **pytest 执行后** | 在 **二次 check、失败修复闭环、一页简报** 中，对比实际结果决策 xfail/skip |
+
+| 标记 | 执行后适用 |
+|------|------------|
+| **xfail** | 功能已有，**实际**与契约/PRD 不符（如契约仅 200/400，实返 401/403） |
+| **skip** | 功能未完整实现（如仅 200、错误 500） |
+
+reason **须含 pytest 执行证据**。  
+**四方式总纲**（①红→绿 ②维持红 ③xfail ④skip）→ Skill `接口自动化实现/用例修复四种方式.md`；③④ 细则 → `xfail与skip治理.md`。
+
+## 4. 脱敏与安全（需求 6）
+
+- 不得出现真实 IP、端口、内网 URL；基址 `[ENV_API_BASE_URL]`。
+- 密码、Token 等用 `[ENV_*]` 占位符；禁止粘贴真实密钥。
+
+## 5. 技术栈（pytest 代码，需求 1）
+
+接口自动化 **可执行代码** 固定：**Python + Requests + Pytest**。详见 Rule `接口自动化-pytest骨架与实现.mdc`。
+
+## 6. 输出自检
+
+- [ ] 已读取并引用具体契约路径与 version
+- [ ] 无契约/节选未声明的必过状态码或字段
+- [ ] 未覆盖点已标 **待确认**
+- [ ] 无真实地址或敏感明文
+- [ ] pytest 任务已区分阶段 A/B；TODO 含说明/来源/解析
+- [ ] xfail/skip 用例 reason 含材料、实际、证据、对接负责人

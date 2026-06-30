@@ -1,0 +1,162 @@
+---
+description: >-
+  接口自动化 pytest 四阶段工作流：A试点流程骨架→B试点实现→C全盘骨架→D全盘实现；
+  业务流程class(flows/)+scenarios/；底层只读；契约优先
+globs: "**/test_cases/**/*.py,**/conftest.py,**/api_keys/**/*.py,**/interface_frame/**,**/allure_*.py,**/run_allure.*"
+alwaysApply: false
+---
+
+# 接口自动化：pytest 骨架与实现
+
+当用户要求 **生成、补充或实现接口自动化 pytest 代码** 时，须：
+
+1. 配合 Skill **`.cursor/skills/接口自动化实现/SKILL.md`**
+2. **先读** **`第十节课/Day_17_interface_frame/interface_frame/AGENTS.md`** 与 **工作流体系.md**
+3. 遵守下列硬约束
+
+## 0. 角色与定位
+
+- **角色**：Python 测试开发，专注接口自动化；能据接口文档与业务诉求挖掘隐藏测试点。
+- **产物**：可执行的 pytest + Requests 代码，非 Markdown 用例表（用例表走 `测试用例生成/接口`）。
+
+## 1. 技术栈（固定，需求 1）
+
+| 层 | 选型 | 禁止 |
+|----|------|------|
+| 语言 | Python 3 | 擅自换语言/stack |
+| HTTP | `requests`（经 `ApiKeys`/Session 封装） | 未评审引入 httpx/aiohttp |
+| 测试 | `pytest` + `conftest.py` fixture | unittest 与同域 pytest 混写 |
+| 数据 | YAML parametrize / `[ENV_*]` | 明文 password/token/内网 URL |
+
+## 2. 四阶段门禁（强制，需求 3）
+
+| 阶段 | 触发 | 允许产出 | 禁止 |
+|------|------|----------|------|
+| **A** | 首次任务 | 1 条试点 **业务流程 class** + TODO | 完整 assert |
+| **B** | 评审通过（「阶段 B」） | 试点流程完整断言 | 跳过 A |
+| **C** | 「阶段 C」 | **全部** flows + scenarios 骨架 + META | 写满 assert |
+| **D** | 「阶段 D」/ C 通过 | 全盘完整用例 | 跳过 C 评审 |
+
+**未获对应阶段授权时**，不得将 TODO 批量替换为完整断言。
+
+用例以 **`flows/` 业务流程 class**（`test_01`→`test_02` 有序步骤）为主；**`scenarios/`** 补充单接口正反向。参考 `interface_frame/test_blackcore.py`。
+
+## 2.1 底层只读（强制）
+
+- `api_keys/api_keys.py`、`conf/set_conf.py`：**默认只读**；新增或修改 **须用户确认**。
+- 数据关联：`write_conf` / `read_conf`（对齐 `test_new.py`）。
+
+## 3. 材料依据（禁止编造，需求 4）
+
+1. **必须先读取** OpenAPI 契约：
+   - 默认 `6.测试用例生成/docs/contracts/`（见契约 Rule）
+   - 用户 @ 文件、upload、Swagger URL 同等效力
+2. path、method、required、responses **仅来自契约**；业务语义可来自 **业务节选**（见 Skill `业务节选接入.md`）。
+3. 读不到契约 → **停止**必过断言/TODO 结论，仅输出待确认占位。
+4. 契约与业务节选冲突 → **结构以契约**，语义标 **待确认**。
+
+## 4. 业务方向节选（需求 5）
+
+- 用户单独提交的流程/鉴权/数据关联说明 → **必须读取**并写入 TODO 来源。
+- 无节选 → 标注 **「仅契约」**。
+- 业务节选 **不得** 替代契约中的 schema、状态码、字段名。
+
+## 5. TODO 注释（强制，需求 7）
+
+每条 TODO **单行**；其 **上方** 三行 `#` 注释：
+
+```python
+    # 说明：{做什么}
+    # 来源：{契约 path/responses | 业务节选 | 框架惯例}
+    # 解析：{字段含义、待确认点}
+    # TODO: {单行可执行代码或伪代码}
+```
+
+禁止：无来源 TODO；说明塞进 TODO 同一行。
+
+阶段 A 中 `if/elif` 仅含 TODO 时，须加 `pass` 保证语法可收集。
+
+## 6. 用例与 Fixture 注释（需求 8）
+
+- **模块顶**：契约来源、path、responses 摘要。
+- **每个 test 函数 docstring**：用例名、接口、数据来源、Fixture 列表。
+- **每个 fixture docstring**：职责、契约/业务来源、Fixture 链层数、scope 理由（非 function 时）。
+
+## 7. 断言基本要求（阶段 B/D；二次 check 原则 3）
+
+获取响应后 **先 body、再与 status 联合断言**；**状态码 → body 信息 → body 字段** 均须满足 API 文档（OpenAPI `responses` / schema / examples）。
+
+**优先级：body → status**（契约有 body/examples/schema 时强制执行）
+
+1. **先 body**：整体结构、错误语义、字段存在性、类型、examples 语义
+2. **再 status_code**：须为契约 `responses` 已声明码，与 body 联合校验；200 类可作辅助断言
+3. **契约无 body 描述**：**status-only**（仅 `assert status_code`）；代码 `# 解析` + META **须额外说明**；二次 check 简报 **§6/§7** 登记 + **对接负责人**
+
+### 7.3 执行后 — 用例修复四方式
+
+pytest 执行后每条用例 **仅且必须** 归入：**①红→绿 ②维持红 ③xfail ④skip**。总纲 → Skill `用例修复四种方式.md`；③④ → `xfail与skip治理.md`。
+
+### 7.1 补全实现（B/D）强制要求
+
+| 模式 | 条件 | 要求 |
+|------|------|------|
+| **body+status** | 契约对该 response 有 body/schema/examples | 先 body 后 status；禁止仅 status |
+| **status-only** | 契约 **无** body 定义 | 仅 status + 额外说明 + 简报 §6/§7（**假绿风险与解决手段**） |
+
+- **禁止**：契约有可断言 body 时仅 `assert status_code`；无 body 未说明即用 status-only
+- **401/400/404**：body 与 status **联合**评估（body 排除成功态字段、对齐 error 语义）
+- **反向用例**：同样 body → status；**以绿色为目标**——固定触发、可复现数据、合理断言条件；禁止「非 2xx 即可」或 flaky
+- token：body 断言 **一次** → `get_text` + `write_conf`，禁止二次存在性 assert
+- 反向鉴权：见 `鉴权与Fixture治理.md`
+
+### 7.2 二次 check 断言审计（B/D 必做）
+
+逐 step/scenario 核对断言模式；产出简报见 Skill `二次check简报模板.md`（§5 审计表、§6 status-only + 对接负责人、**§7 假绿风险与解决手段**）。
+
+**假绿**：status-only 用例 pytest 通过仍可能 **未验真** body；简报 §7 **必须**说明风险等级与解决手段（补契约 / 最小 body / xfail / 复核）。
+
+二次 check 全表：Skill `二次check规范.md` §4
+
+## 8. 脱敏（需求 6）
+
+- 基址：`[ENV_API_BASE_URL]`；凭据：`[ENV_*]` + `.env.example` 键名。
+- 日志与断言信息 **禁止** 输出 token/password 明文。
+
+## 9. Fixture 治理（摘要）
+
+细则：`.cursor/skills/pytest-fixture与用例实现/SKILL.md`、`鉴权与Fixture治理.md`
+
+- 链式依赖 ≤ 2 层；默认 function scope；禁止默认 `autouse=True`。
+- parametrize 须中文 `场景` ids；conftest 配中文 ids hook。
+
+## 11. Allure 测试报告（阶段 D / 用户明确要求时）
+
+细则：[Allure报告规范.md](../skills/接口自动化实现/Allure报告规范.md)
+
+| 项 | 要求 |
+|----|------|
+| **阶段 A** | **禁止全量接入**（helpers/allure_*、attach、run 脚本） |
+| **阶段 B/C** | 可选 epic/step 占位；C 不写满 attach |
+| **阶段 D** | 推荐：`--alluredir` + `allure generate`；回复 HTML 路径 |
+| **目录** | `reports/allure-results/`、`reports/allure-report/`（gitignore） |
+| **脱敏** | attach 须脱敏 token/Authorization；environment 无明文凭据 |
+| **与简报** | 二次 check 简报 = 质量门禁；Allure = 执行展示；D 结束两者路径均回复 |
+
+命令摘要：
+
+```bash
+pytest test_cases/ -sv --alluredir=reports/allure-results --clean-alluredir
+allure generate reports/allure-results -o reports/allure-report --clean
+```
+
+参考：`interface_pytest/test_cases/test_blackcore.py`；完整示例：`course-center-api-frame/`。
+
+## 10. 生成后自检
+
+- [ ] 已读工作流体系；阶段正确（A 无完整 assert / B 已授权）
+- [ ] 2～3 接口；契约 path/version 已引用
+- [ ] 每条 TODO 有说明/来源/解析；test/fixture 有 docstring
+- [ ] 脱敏通过；未编造契约外 status/字段
+- [ ] 业务节选已读或标「仅契约」
+- [ ] 阶段 B/D：断言 body+status 或 status-only 均已说明；二次 check 简报 §5/§6/§7 已产出（含假绿说明）
+- [ ] 阶段 D / 用户要求 Allure：已 `--alluredir` + generate（或说明 CLI/ENV 缺失）；attach 已脱敏
